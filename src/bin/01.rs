@@ -24,20 +24,7 @@ fn main() -> Result<()> {
     println!("=== Part 1 ===");
 
     fn part1<R: BufRead>(reader: R) -> Result<u32> {
-        let mut left_list: Vec<u32> = Vec::new();
-        let mut right_list: Vec<u32> = Vec::new();
-
-        let lines = reader.lines().flatten();
-        for line in lines {
-            let mut split_line = line.split_whitespace();
-            let left_number = split_line.next().unwrap().parse::<u32>()?;
-            let right_number = split_line.last().unwrap().parse::<u32>()?;
-
-            left_list.push(left_number);
-            right_list.push(right_number);
-        }
-        left_list.sort();
-        right_list.sort();
+        let (left_list, right_list) = get_sorted_vectors(reader)?;
 
         let mut difference: u32 = 0;
         for (x, y) in left_list.iter().zip(right_list) {
@@ -69,4 +56,23 @@ fn main() -> Result<()> {
     //endregion
 
     Ok(())
+}
+
+fn get_sorted_vectors<R: BufRead>(reader: R) -> Result<(Vec<u32>, Vec<u32>)> {
+    let mut left_list: Vec<u32> = Vec::new();
+    let mut right_list: Vec<u32> = Vec::new();
+
+    let lines = reader.lines().flatten();
+    for line in lines {
+        let mut split_line = line.split_whitespace();
+        let left_number = split_line.next().unwrap().parse::<u32>()?;
+        let right_number = split_line.last().unwrap().parse::<u32>()?;
+
+        left_list.push(left_number);
+        right_list.push(right_number);
+    }
+    left_list.sort();
+    right_list.sort();
+
+    Ok((left_list, right_list))
 }
