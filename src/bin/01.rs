@@ -6,7 +6,7 @@ use code_timing_macros::time_snippet;
 use const_format::concatcp;
 use adv_code_2024::*;
 
-const DAY: &str = "01"; // TODO: Fill the day
+const DAY: &str = "01";
 const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
 
 const TEST: &str = "\
@@ -25,7 +25,11 @@ fn main() -> Result<()> {
     println!("=== Part 1 ===");
 
     fn part1<R: BufRead>(reader: R) -> Result<u32> {
-        let (left_list, right_list) = get_sorted_vectors(reader)?;
+        let (mut left_list, mut right_list) = get_two_lists(reader)?;
+
+        left_list.sort();
+        right_list.sort();
+
 
         let mut difference: u32 = 0;
         for (x, y) in left_list.iter().zip(right_list) {
@@ -34,7 +38,6 @@ fn main() -> Result<()> {
         Ok(difference)
     }
 
-    // TODO: Set the expected answer for the test input
     assert_eq!(11, part1(BufReader::new(TEST.as_bytes()))?);
 
     let input_file = BufReader::new(File::open(INPUT_FILE)?);
@@ -46,7 +49,7 @@ fn main() -> Result<()> {
     println!("\n=== Part 2 ===");
 
     fn part2<R: BufRead>(reader: R) -> Result<u32> {
-        let (left_list, right_list) = get_sorted_vectors(reader)?;
+        let (left_list, right_list) = get_two_lists(reader)?;
 
         let mut right_items_counts = HashMap::new();
         for right_item in right_list {
@@ -57,7 +60,7 @@ fn main() -> Result<()> {
         let mut similarity_score: u32 = 0;
         for left_item in left_list {
             let count = right_items_counts.get(&left_item).unwrap_or(&0);
-            similarity_score += count * left_item as u32;
+            similarity_score += count * left_item;
 
         }
 
@@ -74,7 +77,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn get_sorted_vectors<R: BufRead>(reader: R) -> Result<(Vec<u32>, Vec<u32>)> {
+fn get_two_lists<R: BufRead>(reader: R) -> Result<(Vec<u32>, Vec<u32>)> {
     let mut left_list: Vec<u32> = Vec::new();
     let mut right_list: Vec<u32> = Vec::new();
 
@@ -87,8 +90,6 @@ fn get_sorted_vectors<R: BufRead>(reader: R) -> Result<(Vec<u32>, Vec<u32>)> {
         left_list.push(left_number);
         right_list.push(right_number);
     }
-    left_list.sort();
-    right_list.sort();
 
     Ok((left_list, right_list))
 }
