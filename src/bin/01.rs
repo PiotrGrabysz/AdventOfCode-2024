@@ -30,7 +30,6 @@ fn main() -> Result<()> {
         left_list.sort();
         right_list.sort();
 
-
         let mut difference: u32 = 0;
         for (x, y) in left_list.iter().zip(right_list) {
             difference += x.abs_diff(y)
@@ -51,17 +50,12 @@ fn main() -> Result<()> {
     fn part2<R: BufRead>(reader: R) -> Result<u32> {
         let (left_list, right_list) = get_two_lists(reader)?;
 
-        let mut right_items_counts = HashMap::new();
-        for right_item in right_list {
-            let count = right_items_counts.entry(right_item).or_insert(0);
-            *count += 1;
-        }
+        let right_items_counts = count_items(right_list);
 
         let mut similarity_score: u32 = 0;
         for left_item in left_list {
             let count = right_items_counts.get(&left_item).unwrap_or(&0);
             similarity_score += count * left_item;
-
         }
 
         Ok(similarity_score)
@@ -78,6 +72,8 @@ fn main() -> Result<()> {
 }
 
 fn get_two_lists<R: BufRead>(reader: R) -> Result<(Vec<u32>, Vec<u32>)> {
+    // Return two vectors, with left and right column
+
     let mut left_list: Vec<u32> = Vec::new();
     let mut right_list: Vec<u32> = Vec::new();
 
@@ -92,4 +88,13 @@ fn get_two_lists<R: BufRead>(reader: R) -> Result<(Vec<u32>, Vec<u32>)> {
     }
 
     Ok((left_list, right_list))
+}
+
+fn count_items(vec: Vec<u32>) -> HashMap<u32, u32> {
+    let mut counter: HashMap<u32, u32> = HashMap::new();
+    for item in vec {
+        let count = counter.entry(item).or_insert(0);
+        *count += 1;
+    }
+    counter
 }
