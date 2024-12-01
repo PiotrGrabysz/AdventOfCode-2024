@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use anyhow::*;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -42,17 +43,32 @@ fn main() -> Result<()> {
     //endregion
 
     //region Part 2
-    // println!("\n=== Part 2 ===");
-    //
-    // fn part2<R: BufRead>(reader: R) -> Result<usize> {
-    //     Ok(0)
-    // }
-    //
-    // assert_eq!(0, part2(BufReader::new(TEST.as_bytes()))?);
-    //
-    // let input_file = BufReader::new(File::open(INPUT_FILE)?);
-    // let result = time_snippet!(part2(input_file)?);
-    // println!("Result = {}", result);
+    println!("\n=== Part 2 ===");
+
+    fn part2<R: BufRead>(reader: R) -> Result<u32> {
+        let (left_list, right_list) = get_sorted_vectors(reader)?;
+
+        let mut right_items_counts = HashMap::new();
+        for right_item in right_list {
+            let count = right_items_counts.entry(right_item).or_insert(0);
+            *count += 1;
+        }
+
+        let mut similarity_score: u32 = 0;
+        for left_item in left_list {
+            let count = right_items_counts.get(&left_item).unwrap_or(&0);
+            similarity_score += count * left_item as u32;
+
+        }
+
+        Ok(similarity_score)
+    }
+
+    assert_eq!(31, part2(BufReader::new(TEST.as_bytes()))?);
+
+    let input_file = BufReader::new(File::open(INPUT_FILE)?);
+    let result = time_snippet!(part2(input_file)?);
+    println!("Result = {}", result);
     //endregion
 
     Ok(())
