@@ -37,6 +37,9 @@ fn main() -> Result<()> {
 
     assert_eq!(2, part1(BufReader::new(TEST.as_bytes()))?);
 
+    let line_count = count_lines(BufReader::new(File::open(INPUT_FILE)?));
+    println!("Number of lines in the file: {}", line_count);
+
     let input_file = BufReader::new(File::open(INPUT_FILE)?);
     let result = time_snippet!(part1(input_file)?);
     println!("Result = {}", result);
@@ -85,24 +88,42 @@ fn convert_line_to_numbers(line: &str) -> Vec<i32> {
 
 fn are_all_levels_safe(levels: Vec<i32>) -> bool {
 
-    let mut maybe_increasing = true;
-    let mut maybe_decreasing = true;
-
-    let mut prev_number = &levels[0];
-    for next_number in &levels[1..] {
-        let difference = (next_number - prev_number).abs();
-        if difference < 1 || difference > 3 {
-            return false;
-        }
-
-        if prev_number < next_number {
-            maybe_decreasing = false;
-        }
-        if prev_number > next_number {
-            maybe_increasing = false;
-        }
-
-        prev_number = next_number;
+    if adjacent_levels_have_incorrect_difference(&levels) {
+        return false;
     }
-    maybe_increasing || maybe_decreasing
+    if !levels_are_monotonic(&levels) {
+        return false;
+    }
+    true
+}
+
+fn count_lines<R: BufRead>(reader: R) -> usize {
+    let lines = reader.lines().flatten();
+    let count = lines.count();
+    count
+}
+
+fn adjacent_levels_have_incorrect_difference(levels: &Vec<i32>) -> bool {
+    let min_difference = 1;
+    let max_difference = 3;
+
+    for window in levels.windows(2) {
+        if let [x, y] = window {
+            let difference = (x - y).abs();
+            if difference < min_difference || difference > max_difference {
+                return true;
+            }
+        };
+    }
+    false
+}
+
+fn levels_are_monotonic(levels: &Vec<i32>) -> bool {
+    if levels.is_sorted() {
+        return true;
+    }
+    if levels.iter().rev().is_sorted() {
+        return true;
+    }
+    false
 }
