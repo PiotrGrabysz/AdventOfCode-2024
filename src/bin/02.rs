@@ -1,10 +1,9 @@
+use adv_code_2024::*;
 use anyhow::*;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use code_timing_macros::time_snippet;
 use const_format::concatcp;
-use itertools::Itertools;
-use adv_code_2024::*;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 
 const DAY: &str = "02";
 const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
@@ -25,23 +24,21 @@ fn main() -> Result<()> {
     println!("=== Part 1 ===");
 
     fn part1<R: BufRead>(reader: R) -> Result<usize> {
-
         let lines = reader.lines().flatten();
         let mut safe_lines_count = 0;
         for line in lines {
-            if is_line_safe(line) {
+            if is_line_safe(&line) {
                 safe_lines_count += 1;
             }
         }
         Ok(safe_lines_count)
     }
 
-    // TODO: Set the expected answer for the test input
     assert_eq!(2, part1(BufReader::new(TEST.as_bytes()))?);
 
-    // let input_file = BufReader::new(File::open(INPUT_FILE)?);
-    // let result = time_snippet!(part1(input_file)?);
-    // println!("Result = {}", result);
+    let input_file = BufReader::new(File::open(INPUT_FILE)?);
+    let result = time_snippet!(part1(input_file)?);
+    println!("Result = {}", result);
     //endregion
 
     //region Part 2
@@ -61,8 +58,11 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn is_line_safe(line: String) -> bool {
-    let numbers: Vec<i32> = line.split_whitespace().map(|x| x.parse::<i32>().unwrap()).collect();
+fn is_line_safe(line: &str) -> bool {
+    let numbers: Vec<i32> = line
+        .split_whitespace()
+        .map(|x| x.parse::<i32>().unwrap())
+        .collect();
 
     let mut maybe_increasing = true;
     let mut maybe_decreasing = true;
