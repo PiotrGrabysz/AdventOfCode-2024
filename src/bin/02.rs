@@ -27,7 +27,8 @@ fn main() -> Result<()> {
         let lines = reader.lines().flatten();
         let mut safe_lines_count = 0;
         for line in lines {
-            if is_line_safe(&line) {
+            let levels = convert_line_to_numbers(&line);
+            if are_all_levels_safe(levels) {
                 safe_lines_count += 1;
             }
         }
@@ -42,33 +43,53 @@ fn main() -> Result<()> {
     //endregion
 
     //region Part 2
-    // println!("\n=== Part 2 ===");
-    //
-    // fn part2<R: BufRead>(reader: R) -> Result<usize> {
-    //     Ok(0)
-    // }
-    //
-    // assert_eq!(0, part2(BufReader::new(TEST.as_bytes()))?);
-    //
-    // let input_file = BufReader::new(File::open(INPUT_FILE)?);
-    // let result = time_snippet!(part2(input_file)?);
-    // println!("Result = {}", result);
+    println!("\n=== Part 2 ===");
+
+    fn part2<R: BufRead>(reader: R) -> Result<usize> {
+        // Brute force solution
+        let mut safe_lines_count = 0;
+        let lines = reader.lines().flatten();
+        for line in lines {
+            let levels = convert_line_to_numbers(&line);
+            for index_to_drop in 0..levels.len() {
+                let mut levels_without_one_index = levels.clone();
+                levels_without_one_index.remove(index_to_drop);
+
+                if are_all_levels_safe(levels_without_one_index) {
+                    safe_lines_count += 1;
+                    break;
+                }
+            }
+        }
+        Ok(safe_lines_count)
+    }
+
+    assert_eq!(4, part2(BufReader::new(TEST.as_bytes()))?);
+
+    let input_file = BufReader::new(File::open(INPUT_FILE)?);
+    let result = time_snippet!(part2(input_file)?);
+    println!("Result = {}", result);
     //endregion
 
     Ok(())
 }
 
-fn is_line_safe(line: &str) -> bool {
+
+fn convert_line_to_numbers(line: &str) -> Vec<i32> {
     let numbers: Vec<i32> = line
         .split_whitespace()
-        .map(|x| x.parse::<i32>().unwrap())
+        .map(|x| x.parse::<i32>().expect("The input data contains a valid list of numbers"))
         .collect();
+    numbers
+}
+
+fn are_all_levels_safe(levels: Vec<i32>) -> bool {
 
     let mut maybe_increasing = true;
     let mut maybe_decreasing = true;
 
-    let mut prev_number = &numbers[0];
-    for next_number in &numbers[1..] {
+    let mut prev_number = &levels[0];
+    for next_number in &levels[1..] {
         let difference = (next_number - prev_number).abs();
         if difference < 1 || difference > 3 {
             return false;
