@@ -77,17 +77,18 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-
 fn convert_line_to_numbers(line: &str) -> Vec<i32> {
     let numbers: Vec<i32> = line
         .split_whitespace()
-        .map(|x| x.parse::<i32>().expect("The input data contains a valid list of numbers"))
+        .map(|x| {
+            x.parse::<i32>()
+                .expect("The input data contains a valid list of numbers")
+        })
         .collect();
     numbers
 }
 
 fn are_all_levels_safe(levels: Vec<i32>) -> bool {
-
     if adjacent_levels_have_incorrect_difference(&levels) {
         return false;
     }
