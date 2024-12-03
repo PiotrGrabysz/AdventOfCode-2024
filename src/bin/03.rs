@@ -24,34 +24,28 @@ fn main() -> Result<()> {
     //region Part 1
     println!("=== Part 1 ===");
 
-    fn part1<R: BufRead>(reader: R) -> Result<i32> {
-        let mul_regex = Regex::new(r"mul\(\d{1,3},\d{1,3}\)")?;
-        let extract_numbers_regex = Regex::new(r"\d{1,3}")?;
+    fn part1<R: BufRead>(reader: &mut R) -> Result<i32> {
+        // Capture patterns like "mul(x,y)", where "x" and "y" are numbers up to three digits
+        let multiplication_formula_regex = Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)")?;
 
-        let lines = reader.lines().flatten().collect::<Vec<_>>();
+        let file_content = read_file_to_string(reader);
 
-        let mut multiplication_sum = 0;
-        for line in &lines {
-            for cap in mul_regex.captures_iter(&line) {
-                let multiply_operation = &cap[0];
-
-                let numbers: Vec<i32> = extract_numbers_regex
-                    .find_iter(multiply_operation)
-                    .filter_map(|m| m.as_str().parse::<i32>().ok())
-                    .collect();
-
-                multiplication_sum += numbers[0] * numbers[1];
-            }
-        }
+        let multiplication_sum = multiplication_formula_regex
+            .captures_iter(file_content.as_str())
+            .filter_map(|captures| {
+                let x = captures.get(1)?.as_str().parse::<i32>().ok()?;
+                let y = captures.get(2)?.as_str().parse::<i32>().ok()?;
+                Some(x * y)
+            })
+            .sum();
 
         Ok(multiplication_sum)
     }
 
-    // TODO: Set the expected answer for the test input
-    assert_eq!(161, part1(BufReader::new(TEST.as_bytes()))?);
+    assert_eq!(161, part1(&mut BufReader::new(TEST.as_bytes()))?);
 
-    let input_file = BufReader::new(File::open(INPUT_FILE)?);
-    let result = time_snippet!(part1(input_file)?);
+    let mut input_file = BufReader::new(File::open(INPUT_FILE)?);
+    let result = time_snippet!(part1(&mut input_file)?);
     println!("Result = {}", result);
     //endregion
 
@@ -108,4 +102,10 @@ fn main() -> Result<()> {
     //endregion
 
     Ok(())
+}
+
+fn read_file_to_string<R: BufRead>(reader: &mut R) -> String {
+    let mut file_content: String = String::new();
+    _ = reader.read_to_string(&mut file_content);
+    file_content
 }
