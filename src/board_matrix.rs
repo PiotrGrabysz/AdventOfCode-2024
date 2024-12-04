@@ -1,6 +1,5 @@
-use std::io::BufRead;
 use anyhow::*;
-
+use std::io::BufRead;
 
 #[derive(Debug)]
 pub struct Board<T> {
@@ -14,12 +13,16 @@ impl<T> Board<T> {
         let n_rows = board.len();
         let n_cols = board[0].len();
 
-        Board {board, n_rows, n_cols}
+        Board {
+            board,
+            n_rows,
+            n_cols,
+        }
     }
 
     pub fn get_value(&self, row: usize, col: usize) -> Result<&T> {
         if row < self.n_rows && col < self.n_cols {
-            return Ok(&self.board[row][col])
+            return Ok(&self.board[row][col]);
         }
         Err(Error::msg("Attempting to get out of bounds value"))
     }
@@ -42,7 +45,8 @@ impl Board<char> {
     }
 }
 
-enum Move {
+#[derive(Debug)]
+pub enum Move {
     Left,
     Right,
     Top,
@@ -76,23 +80,71 @@ pub struct Point {
 
 impl Point {
     pub fn add(&self, point: &Point) -> Point {
-        Point {x: self.x + point.x, y: self.y + point.y}
+        Point {
+            x: self.x + point.x,
+            y: self.y + point.y,
+        }
     }
 }
 
-pub fn move_to_direction<'a, T>(
+fn move_to_direction<'a, T>(
     board: &'a Board<T>,
     current_position: &Point,
-    direction: Move,
+    direction: &Point,
 ) -> Result<(Point, &'a T)> {
-    let move_coordinates = direction.coordinates();
-    let new_position = current_position.add(&move_coordinates);
+    let new_position = current_position.add(direction);
 
     let value = board.get_value_from_point(&new_position);
 
     match value {
-        Result::Ok(value) => Ok((new_position,&value)),
+        Result::Ok(value) => Ok((new_position, &value)),
         Err(e) => Err(e),
+    }
+}
+
+#[derive(Debug)]
+pub struct MoveIterator<'a> {
+    board: &'a Board<char>,
+    current_position: Point,
+    direction: Point,
+    first_move: bool,
+}
+
+impl<'a> MoveIterator<'a> {
+    pub fn new(board: &'a Board<char>, current_position: &Point, direction: &Move) -> Self {
+        MoveIterator {
+            board,
+            current_position: Point {x: current_position.x, y: current_position.y},
+            direction: direction.coordinates(),
+            first_move: true,
+        }
+    }
+}
+
+impl<'a> Iterator for MoveIterator<'a> {
+    type Item = &'a char;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.first_move {
+            let result = self.board.get_value_from_point(&self.current_position);
+            match result {
+                Result::Ok(result) => {
+                    self.first_move = false;
+                    return Some(result);
+                }
+                Err(_) => None::<Self::Item>,
+            };
+        }
+
+        let result = move_to_direction(&self.board, &self.current_position, &self.direction);
+        match result {
+            Result::Ok(result) => {
+                let (new_position, value) = result;
+                self.current_position = new_position;
+                Some(value)
+            }
+            Err(_) => None,
+        }
     }
 }
 
@@ -188,12 +240,45 @@ mod tests {
         let row_3 = vec![7, 8, 9];
         let board = Board::new(vec![row_1, row_2, row_3]);
 
-        let (new_position, value) = move_to_direction(
-            &board, &Point { x: 1, y: 1 }, Move::BottomRight,
-        ).unwrap();
+        let (new_position, value) =
+            move_to_direction(&board, &Point { x: 1, y: 1 }, &Move::BottomRight.coordinates()).unwrap();
 
         assert_eq!(*value, 9);
         assert_eq!(new_position.x, 2);
         assert_eq!(new_position.y, 2);
+    }
+
+    #[test]
+    fn iterate_over_board() {
+        let row1 = "abc".chars().collect();
+        let board = Board::new(vec![row1]);
+
+        let direction = Move::Right;
+        let starting_position = Point { x: 0, y: 0 };
+
+        let mut move_iterator = MoveIterator::new(&board, &starting_position, &direction);
+
+        let a = move_iterator.next().unwrap();
+        assert_eq!(*a, 'a');
+
+        let b = move_iterator.next().unwrap();
+        assert_eq!(*b, 'b');
+    }
+
+    #[test]
+    fn iterate_over_entire_direction() {
+        let row1 = "ab".chars().collect();
+        let board = Board::new(vec![row1]);
+
+        let direction = Move::Right;
+        let starting_position = Point { x: 0, y: 0 };
+
+        let move_iterator = MoveIterator::new(&board, &starting_position, &direction);
+
+        let mut last_char = 'a';
+        for x in move_iterator {
+            last_char = *x;
+        }
+        assert_eq!(last_char, 'b');
     }
 }
