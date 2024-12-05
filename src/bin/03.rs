@@ -64,7 +64,10 @@ fn main() -> Result<()> {
                 continue;
             }
             if !disabled_instruction_mode {
-                match get_last_multiplication(current_string.as_str(), &multiplication_formula_regex) {
+                match get_last_multiplication(
+                    current_string.as_str(),
+                    &multiplication_formula_regex,
+                ) {
                     Some(m) => {
                         multiplication_sum += m;
                         current_string.clear();
@@ -106,7 +109,10 @@ fn sum_mul_operations(instructions: &str) -> Result<i32> {
     Ok(multiplication_sum)
 }
 
-fn get_last_multiplication(instructions: &str, multiplication_formula_regex: &Regex) -> Option<i32> {
+fn get_last_multiplication(
+    instructions: &str,
+    multiplication_formula_regex: &Regex,
+) -> Option<i32> {
     if let Some(captures) = multiplication_formula_regex
         .captures_iter(instructions)
         .last()
@@ -125,7 +131,7 @@ fn get_last_multiplication(instructions: &str, multiplication_formula_regex: &Re
             .parse::<i32>()
             .ok()
             .unwrap();
-        return Some(num1 * num2)
+        return Some(num1 * num2);
     }
     None
 }
