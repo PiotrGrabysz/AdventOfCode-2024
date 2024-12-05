@@ -2,9 +2,12 @@ use adv_code_2024::*;
 use anyhow::*;
 use code_timing_macros::time_snippet;
 use const_format::concatcp;
+use itertools::Itertools;
 use regex::Regex;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::num::ParseIntError;
 
 const DAY: &str = "05";
 const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
@@ -69,17 +72,40 @@ fn main() -> Result<()> {
     //endregion
 
     //region Part 2
-    // println!("\n=== Part 2 ===");
-    //
-    // fn part2<R: BufRead>(reader: R) -> Result<usize> {
-    //     Ok(0)
-    // }
-    //
-    // assert_eq!(0, part2(BufReader::new(TEST.as_bytes()))?);
-    //
-    // let input_file = BufReader::new(File::open(INPUT_FILE)?);
-    // let result = time_snippet!(part2(input_file)?);
-    // println!("Result = {}", result);
+    println!("\n=== Part 2 ===");
+
+    fn part2<R: BufRead>(reader: &mut R) -> Result<i32> {
+        let rules = read_int_rules(reader)?;
+        let pages = read_pages_to_ints(reader)?;
+
+        let mut answer = 0;
+
+        for page in pages {
+            let sorted_page: Vec<i32> = page
+                .clone()
+                .into_iter()
+                .sorted_by(|a, b| {
+                    if rules.contains(&IntRule::new(*a, *b)) {
+                        return std::cmp::Ordering::Less;
+                    }
+                    return std::cmp::Ordering::Greater;
+                })
+                .collect();
+
+            if sorted_page != page {
+                let middle_index = sorted_page.len() / 2;
+                answer += sorted_page[middle_index]
+            }
+        }
+
+        Ok(answer)
+    }
+
+    assert_eq!(123, part2(&mut BufReader::new(TEST.as_bytes()))?);
+
+    let input_file = &mut BufReader::new(File::open(INPUT_FILE)?);
+    let result = time_snippet!(part2(input_file)?);
+    println!("Result = {}", result);
     //endregion
 
     Ok(())
@@ -143,4 +169,55 @@ fn find_middle_number(line: &str) -> i32 {
 
     let middle_index = numbers.len() / 2;
     numbers[middle_index].parse::<i32>().unwrap()
+}
+
+#[derive(Debug, Eq, PartialEq, Hash)]
+struct IntRule {
+    left: i32,
+    right: i32,
+}
+
+impl IntRule {
+    fn new(left: i32, right: i32) -> IntRule {
+        IntRule { left, right }
+    }
+    fn from_line(line: &str) -> Result<IntRule> {
+        let numbers: Vec<i32> = line
+            .split('|')
+            .map(|s| s.trim().parse::<i32>())
+            .collect::<Result<Vec<i32>, ParseIntError>>()?;
+        let left = numbers[0];
+        let right = numbers[1];
+        Ok(IntRule { left, right })
+    }
+}
+
+fn read_int_rules<R: BufRead>(reader: &mut R) -> Result<HashSet<IntRule>> {
+    let mut rule_set = HashSet::new();
+
+    for line in reader.lines().flatten() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            break;
+        }
+        rule_set.insert(IntRule::from_line(&line)?);
+    }
+    Ok(rule_set)
+}
+
+fn read_pages_to_ints<R: BufRead>(reader: &mut R) -> Result<Vec<Vec<i32>>> {
+    let mut pages = Vec::new();
+    for line in reader.lines().flatten() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            break;
+        }
+        let numbers: Vec<i32> = line
+            .split(',')
+            .map(|s| s.trim().parse::<i32>())
+            .collect::<Result<Vec<i32>, ParseIntError>>()?;
+
+        pages.push(numbers);
+    }
+    Ok(pages)
 }
