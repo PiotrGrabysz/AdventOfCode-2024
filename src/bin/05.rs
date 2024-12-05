@@ -3,7 +3,6 @@ use anyhow::*;
 use code_timing_macros::time_snippet;
 use const_format::concatcp;
 use itertools::Itertools;
-use regex::Regex;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -52,15 +51,14 @@ fn main() -> Result<()> {
     fn part1<R: BufRead>(reader: &mut R) -> Result<i32> {
         let rules = read_rules(reader)?;
 
-        let pages = read_pages(reader);
+        let pages = read_pages(reader)?;
 
         let mut answer = 0;
-        for line in &pages {
-            if is_line_correct(line, &rules) {
-                answer += find_middle_number(line);
+        for page in &pages {
+            if is_page_correct(page, &rules) {
+                answer += get_middle_number(page);
             }
         }
-
         Ok(answer)
     }
 
@@ -75,26 +73,27 @@ fn main() -> Result<()> {
     println!("\n=== Part 2 ===");
 
     fn part2<R: BufRead>(reader: &mut R) -> Result<i32> {
-        let rules = read_int_rules(reader)?;
-        let pages = read_pages_to_ints(reader)?;
+        // The idea of solution is to sort the pages based on a custom ordering
+
+        let rules = read_rules(reader)?;
+        let pages = read_pages(reader)?;
 
         let mut answer = 0;
 
         for page in pages {
-            let sorted_page: Vec<i32> = page
+            let sorted_page: Vec<_> = page
                 .clone()
                 .into_iter()
                 .sorted_by(|a, b| {
-                    if rules.contains(&IntRule::new(*a, *b)) {
+                    if rules.is_ordered_pair(*a, *b) {
                         return std::cmp::Ordering::Less;
                     }
                     return std::cmp::Ordering::Greater;
                 })
                 .collect();
 
-            if sorted_page != page {
-                let middle_index = sorted_page.len() / 2;
-                answer += sorted_page[middle_index]
+            if page != sorted_page {
+                answer += get_middle_number(&sorted_page)
             }
         }
 
@@ -111,101 +110,68 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug)]
-struct Rule {
-    // pub first: String,
-    // pub second: String,
-    regex: Regex,
-}
-
-impl Rule {
-    pub fn from_line(line: &str) -> Result<Rule> {
-        // let regex = Regex::new(line)?;
-        let numbers: Vec<&str> = line.split("|").collect();
-        let first = String::from(numbers[0]);
-        let second = String::from(numbers[1]);
-
-        let regex = Regex::new(&format!("{}.+{}", second, first))?;
-
-        Ok(Rule { regex })
-    }
-
-    pub fn is_line_safe(&self, line: &str) -> bool {
-        if self.regex.is_match(line) {
-            return false;
-        }
-        true
-    }
-}
-
-fn read_rules<R: BufRead>(reader: &mut R) -> Result<Vec<Rule>> {
-    let mut rules = Vec::new();
+fn read_rules<R: BufRead>(reader: &mut R) -> Result<RuleSet> {
+    let mut rule_set = RuleSet::new();
 
     for line in reader.lines().flatten() {
         let trimmed = line.trim();
         if trimmed.is_empty() {
             break;
         }
-        rules.push(Rule::from_line(&line)?);
+        rule_set.insert(Rule::from_line(&line)?);
     }
-    Ok(rules)
-}
-
-fn read_pages<R: BufRead>(reader: &mut R) -> Vec<String> {
-    reader.lines().flatten().collect::<Vec<String>>()
-}
-
-fn is_line_correct(line: &str, rules: &Vec<Rule>) -> bool {
-    for rule in rules {
-        if !rule.is_line_safe(&line) {
-            return false;
-        }
-    }
-    true
-}
-
-fn find_middle_number(line: &str) -> i32 {
-    let numbers = line.split(',').collect::<Vec<&str>>();
-
-    let middle_index = numbers.len() / 2;
-    numbers[middle_index].parse::<i32>().unwrap()
+    Ok(rule_set)
 }
 
 #[derive(Debug, Eq, PartialEq, Hash)]
-struct IntRule {
+struct Rule {
     left: i32,
     right: i32,
 }
 
-impl IntRule {
-    fn new(left: i32, right: i32) -> IntRule {
-        IntRule { left, right }
+impl Rule {
+    fn new(left: i32, right: i32) -> Rule {
+        Rule { left, right }
     }
-    fn from_line(line: &str) -> Result<IntRule> {
+    fn from_line(line: &str) -> Result<Rule> {
         let numbers: Vec<i32> = line
             .split('|')
             .map(|s| s.trim().parse::<i32>())
             .collect::<Result<Vec<i32>, ParseIntError>>()?;
         let left = numbers[0];
         let right = numbers[1];
-        Ok(IntRule { left, right })
+        Ok(Rule { left, right })
     }
 }
 
-fn read_int_rules<R: BufRead>(reader: &mut R) -> Result<HashSet<IntRule>> {
-    let mut rule_set = HashSet::new();
+struct RuleSet {
+    rules: HashSet<Rule>,
+}
 
-    for line in reader.lines().flatten() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            break;
+impl RuleSet {
+    fn new() -> RuleSet {
+        RuleSet {
+            rules: HashSet::new(),
         }
-        rule_set.insert(IntRule::from_line(&line)?);
     }
-    Ok(rule_set)
+
+    fn insert(&mut self, rule: Rule) {
+        self.rules.insert(rule);
+    }
+
+    fn contains(&self, rule: &Rule) -> bool {
+        self.rules.contains(rule)
+    }
+
+    fn is_ordered_pair(&self, a: i32, b: i32) -> bool {
+        if self.contains(&Rule::new(a, b)) {
+            return true;
+        }
+        false
+    }
 }
 
-fn read_pages_to_ints<R: BufRead>(reader: &mut R) -> Result<Vec<Vec<i32>>> {
+fn read_pages<R: BufRead>(reader: &mut R) -> Result<Vec<Vec<i32>>> {
     let mut pages = Vec::new();
     for line in reader.lines().flatten() {
         let trimmed = line.trim();
@@ -220,4 +186,20 @@ fn read_pages_to_ints<R: BufRead>(reader: &mut R) -> Result<Vec<Vec<i32>>> {
         pages.push(numbers);
     }
     Ok(pages)
+}
+
+fn is_page_correct(page: &Vec<i32>, rules: &RuleSet) -> bool {
+    let mut prev_number = &page[0];
+    for next_number in &page[1..] {
+        if !rules.is_ordered_pair(*prev_number, *next_number) {
+            return false;
+        }
+        prev_number = next_number;
+    }
+    true
+}
+
+fn get_middle_number(page: &Vec<i32>) -> i32 {
+    let middle_index = page.len() / 2;
+    page[middle_index]
 }
