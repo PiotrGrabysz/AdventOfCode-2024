@@ -3,7 +3,7 @@ use std::io::BufRead;
 
 #[derive(Debug)]
 pub struct Board<T> {
-    board: Vec<Vec<T>>,
+    pub board: Vec<Vec<T>>,
     pub n_rows: usize,
     pub n_cols: usize,
 }
@@ -114,7 +114,10 @@ impl<'a> MoveIterator<'a> {
     pub fn new(board: &'a Board<char>, current_position: &Point, direction: &Move) -> Self {
         MoveIterator {
             board,
-            current_position: Point {x: current_position.x, y: current_position.y},
+            current_position: Point {
+                x: current_position.x,
+                y: current_position.y,
+            },
             direction: direction.coordinates(),
             first_move: true,
         }
@@ -240,8 +243,12 @@ mod tests {
         let row_3 = vec![7, 8, 9];
         let board = Board::new(vec![row_1, row_2, row_3]);
 
-        let (new_position, value) =
-            move_to_direction(&board, &Point { x: 1, y: 1 }, &Move::BottomRight.coordinates()).unwrap();
+        let (new_position, value) = move_to_direction(
+            &board,
+            &Point { x: 1, y: 1 },
+            &Move::BottomRight.coordinates(),
+        )
+        .unwrap();
 
         assert_eq!(*value, 9);
         assert_eq!(new_position.x, 2);

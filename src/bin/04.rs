@@ -82,17 +82,49 @@ fn main() -> Result<()> {
     //endregion
 
     //region Part 2
-    // println!("\n=== Part 2 ===");
-    //
-    // fn part2<R: BufRead>(reader: R) -> Result<usize> {
-    //     Ok(0)
-    // }
-    //
-    // assert_eq!(0, part2(BufReader::new(TEST.as_bytes()))?);
-    //
-    // let input_file = BufReader::new(File::open(INPUT_FILE)?);
-    // let result = time_snippet!(part2(input_file)?);
-    // println!("Result = {}", result);
+    println!("\n=== Part 2 ===");
+
+    fn part2<R: BufRead>(reader: R) -> Result<usize> {
+        let text_matrix = Board::from_buffer(reader);
+
+        let mut counter = 0;
+
+        for row in 1..text_matrix.n_rows - 1 {
+            for col in 1..text_matrix.n_cols - 1 {
+                let middle = text_matrix.get_value(row, col)?;
+                if *middle != 'A' {
+                    continue;
+                }
+                let x1 = text_matrix.get_value(row - 1, col - 1)?;
+                let x2 = text_matrix.get_value(row + 1, col + 1)?;
+                let x3 = text_matrix.get_value(row - 1, col + 1)?;
+                let x4 = text_matrix.get_value(row + 1, col - 1)?;
+
+                if (*x1 == 'M') & (*x2 == 'S') & (*x3 == 'M') & (*x4 == 'S') {
+                    counter += 1;
+                }
+
+                if (*x1 == 'M') & (*x2 == 'S') & (*x3 == 'S') & (*x4 == 'M') {
+                    counter += 1;
+                }
+
+                if (*x1 == 'S') & (*x2 == 'M') & (*x3 == 'M') & (*x4 == 'S') {
+                    counter += 1;
+                }
+
+                if (*x1 == 'S') & (*x2 == 'M') & (*x3 == 'S') & (*x4 == 'M') {
+                    counter += 1;
+                }
+            }
+        }
+        Ok(counter)
+    }
+
+    assert_eq!(9, part2(BufReader::new(TEST.as_bytes()))?);
+
+    let input_file = BufReader::new(File::open(INPUT_FILE)?);
+    let result = time_snippet!(part2(input_file)?);
+    println!("Result = {}", result);
     //endregion
 
     Ok(())
