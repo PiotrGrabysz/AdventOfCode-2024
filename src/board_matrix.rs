@@ -27,8 +27,16 @@ impl<T> Board<T> {
         Err(Error::msg("Attempting to get out of bounds value"))
     }
 
-    fn get_value_from_point(&self, point: &Point) -> Result<&T> {
+    pub fn get_value_from_point(&self, point: &Point) -> Result<&T> {
         self.get_value(point.y as usize, point.x as usize)
+    }
+
+    pub fn set_value(&mut self, row: usize, col: usize, value: T) -> Result<()> {
+        if row < self.n_rows && col < self.n_cols {
+            self.board[row][col] = value;
+            return Ok(());
+        }
+        Err(Error::msg("Attempting to set out of bounds value"))
     }
 }
 
@@ -42,6 +50,12 @@ impl Board<char> {
             }
         }
         Board::new(rows)
+    }
+
+    pub fn print(&self) {
+        for row in &self.board {
+            println!("{}", row.iter().collect::<String>());
+        }
     }
 }
 
