@@ -21,6 +21,13 @@ const TEST: &str = "\
 10456732
 ";
 
+const DIRECTIONS_TO_MOVE: [Point; 4] = [
+    Point { x: 1, y: 0 },
+    Point { x: -1, y: 0 },
+    Point { x: 0, y: 1 },
+    Point { x: 0, y: -1 },
+];
+
 fn main() -> Result<()> {
     start_day(DAY);
 
@@ -115,12 +122,7 @@ fn traverse_trail(
         return;
     }
 
-    for direction in &[
-        Point { x: 1, y: 0 },
-        Point { x: -1, y: 0 },
-        Point { x: 0, y: 1 },
-        Point { x: 0, y: -1 },
-    ] {
+    for direction in &DIRECTIONS_TO_MOVE {
         let next_position = current_position.add(direction);
         let _ = traverse_trail(
             next_position,
@@ -149,12 +151,7 @@ fn traverse_trail_and_count_rating(
     }
 
     let mut total = 0;
-    for direction in &[
-        Point { x: 1, y: 0 },
-        Point { x: -1, y: 0 },
-        Point { x: 0, y: 1 },
-        Point { x: 0, y: -1 },
-    ] {
+    for direction in &DIRECTIONS_TO_MOVE {
         let next_position = current_position.add(direction);
         total += traverse_trail_and_count_rating(next_position, *current_height, topographic_map);
     }
