@@ -59,6 +59,25 @@ impl Board<char> {
     }
 }
 
+impl Board<i8> {
+    pub fn from_buffer<R: BufRead>(reader: R) -> Self {
+        let mut rows: Vec<Vec<i8>> = Vec::new();
+        for line in reader.lines().flatten() {
+            let trimmed = line.trim();
+            if !trimmed.is_empty() {
+                rows.push(
+                    trimmed
+                        .chars()
+                        .map(|c| c.to_digit(10).unwrap())
+                        .map(|num| num as i8)
+                        .collect(),
+                );
+            }
+        }
+        Board::new(rows)
+    }
+}
+
 #[derive(Debug)]
 pub enum Move {
     Left,
@@ -86,7 +105,7 @@ impl Move {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Hash)]
 pub struct Point {
     pub x: i32,
     pub y: i32,
