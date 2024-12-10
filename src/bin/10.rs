@@ -37,15 +37,17 @@ fn main() -> Result<()> {
                 if *value != 0 {
                     continue;
                 }
-                let trail_ends = traverse_trail(
+                let mut unique_trail_ends: HashSet<Point> = HashSet::new();
+                traverse_trail(
                     Point {
                         x: col as i32,
                         y: row as i32,
                     },
                     -1,
                     &topographic_map,
+                    &mut unique_trail_ends,
                 );
-                counter += count_unique_trail_ends(trail_ends);
+                counter += unique_trail_ends.len()
             }
         }
         Ok(counter)
@@ -98,19 +100,21 @@ fn traverse_trail(
     current_position: Point,
     previous_height: i8,
     topographic_map: &Board<i8>,
-) -> Vec<Point> {
+    unique_points: &mut HashSet<Point>,
+) -> () {
     let current_height = match topographic_map.get_value_from_point(&current_position) {
         Result::Ok(value) => value,
-        Err(_) => return Vec::new(),
+        Err(_) => return,
     };
 
     if (current_height - previous_height) != 1 {
-        return Vec::new();
+        return;
     }
     if *current_height == 9 {
-        return vec![current_position];
+        unique_points.insert(current_position);
+        return;
     }
-    let mut trail_ends: Vec<Point> = vec![];
+
     for direction in &[
         Point { x: 1, y: 0 },
         Point { x: -1, y: 0 },
@@ -118,22 +122,13 @@ fn traverse_trail(
         Point { x: 0, y: -1 },
     ] {
         let next_position = current_position.add(direction);
-        let trail_end = traverse_trail(next_position, *current_height, topographic_map);
-        trail_ends.extend(trail_end);
+        let _ = traverse_trail(
+            next_position,
+            *current_height,
+            topographic_map,
+            unique_points,
+        );
     }
-    trail_ends
-}
-
-fn count_unique_trail_ends(trail_ends: Vec<Point>) -> usize {
-    let mut unique_points = HashSet::new();
-    let mut counter = 0;
-    for point in &trail_ends {
-        if !unique_points.contains(point) {
-            counter += 1;
-            unique_points.insert(point);
-        }
-    }
-    counter
 }
 
 fn traverse_trail_and_count_rating(
