@@ -19,15 +19,7 @@ fn main() -> Result<()> {
     println!("=== Part 1 ===");
 
     fn part1<R: BufRead>(reader: R) -> Result<i64> {
-        let disk_map: Vec<usize> = reader
-            .lines()
-            .flatten()
-            .next()
-            .unwrap()
-            .chars()
-            .map(|c| c.to_digit(10).unwrap())
-            .map(|num| num as usize)
-            .collect();
+        let disk_map = read_disk_map(reader)?;
 
         let mut blocks: Vec<i32> = Vec::new();
         let mut free_space_digit = false;
@@ -36,8 +28,7 @@ fn main() -> Result<()> {
         for digit in disk_map {
             if free_space_digit {
                 blocks.append(&mut vec![-1; digit]);
-            }
-            else {
+            } else {
                 blocks.append(&mut vec![block_index; digit]);
                 block_index += 1;
             }
@@ -74,29 +65,112 @@ fn main() -> Result<()> {
     //endregion
 
     //region Part 2
-    // println!("\n=== Part 2 ===");
-    //
-    // fn part2<R: BufRead>(reader: R) -> Result<usize> {
-    //     Ok(0)
-    // }
-    //
-    // assert_eq!(0, part2(BufReader::new(TEST.as_bytes()))?);
-    //
-    // let input_file = BufReader::new(File::open(INPUT_FILE)?);
-    // let result = time_snippet!(part2(input_file)?);
-    // println!("Result = {}", result);
+    println!("\n=== Part 2 ===");
+
+    fn part2<R: BufRead>(reader: R) -> Result<usize> {
+        let disk_map = read_disk_map(reader)?;
+
+        // Divide the dense format representation into file blocks and free space blocks
+
+        let mut file_blocks: Vec<MemoryBlock> = Vec::new();
+        let mut free_space_blocks: Vec<MemoryBlock> = Vec::new();
+        let mut position = 0;
+        let mut file_id = 0;
+        let mut is_file_digit = true;
+
+        for digit in &disk_map {
+            if is_file_digit {
+                let file_block = MemoryBlock {
+                    starting_position: position,
+                    id: file_id,
+                    length: *digit,
+                };
+                file_blocks.push(file_block);
+                file_id += 1;
+            } else {
+                let free_space_block = MemoryBlock {
+                    starting_position: position,
+                    id: 0,
+                    length: *digit,
+                };
+                free_space_blocks.push(free_space_block);
+            }
+            position += digit;
+            is_file_digit = !is_file_digit;
+        }
+
+        // Move file blocks starting from right most position
+
+        for file_block in file_blocks.iter_mut().rev() {
+            for free_space_block in free_space_blocks.iter_mut() {
+                if free_space_block.starting_position >= file_block.starting_position {
+                    break;
+                }
+
+                if free_space_block.length >= file_block.length {
+                    file_block.starting_position = free_space_block.starting_position;
+
+                    // There is less free space know
+                    free_space_block.starting_position += file_block.length;
+                    free_space_block.length -= file_block.length;
+                    break;
+                }
+            }
+        }
+
+        file_blocks.sort_by_key(|block| block.starting_position);
+
+        Ok(calculate_hash2(&file_blocks))
+    }
+
+    assert_eq!(2858, part2(BufReader::new(TEST.as_bytes()))?);
+
+    let input_file = BufReader::new(File::open(INPUT_FILE)?);
+    let result = time_snippet!(part2(input_file)?);
+    println!("Result = {}", result);
     //endregion
 
     Ok(())
 }
 
+fn read_disk_map<R: BufRead>(reader: R) -> Result<Vec<usize>> {
+    let disk_map: Vec<usize> = reader
+        .lines()
+        .flatten()
+        .next()
+        .unwrap()
+        .chars()
+        .map(|c| c.to_digit(10).unwrap())
+        .map(|num| num as usize)
+        .collect();
+    Ok(disk_map)
+}
+
 fn calculate_hash(blocks: &Vec<i32>) -> i64 {
-    let mut hash: i64  = 0;
+    let mut hash: i64 = 0;
     for (idx, digit) in blocks.iter().enumerate() {
         if *digit == -1 {
-            break
+            break;
         }
         hash += (idx as i64) * (*digit as i64);
     }
     hash
+}
+
+fn calculate_hash2(blocks: &Vec<MemoryBlock>) -> usize {
+    let mut hash: usize = 0;
+    for block in blocks {
+        let block_end = block.starting_position + block.length;
+        for i in block.starting_position..block_end {
+            hash += i * block.id
+        }
+    }
+    hash
+}
+
+#[derive(Debug)]
+struct MemoryBlock {
+    starting_position: usize,
+    id: usize,
+    length: usize,
 }
