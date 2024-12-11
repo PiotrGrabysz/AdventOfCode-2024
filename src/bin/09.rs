@@ -118,8 +118,6 @@ fn main() -> Result<()> {
             }
         }
 
-        file_blocks.sort_by_key(|block| block.starting_position);
-
         Ok(calculate_hash2(&file_blocks))
     }
 
@@ -161,9 +159,7 @@ fn calculate_hash2(blocks: &Vec<MemoryBlock>) -> usize {
     let mut hash: usize = 0;
     for block in blocks {
         let block_end = block.starting_position + block.length;
-        for i in block.starting_position..block_end {
-            hash += i * block.id
-        }
+        hash += (block.starting_position + block_end - 1) * block.length * block.id / 2;
     }
     hash
 }
