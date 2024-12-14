@@ -240,7 +240,7 @@ mod tests {
             ABCDE
             EFGHI";
 
-        let board: Board<char> = Board::from_buffer(input_buffer.as_bytes());
+        let board: Board<char> = Board::<char>::from_buffer(input_buffer.as_bytes());
         assert_eq!(board.n_rows, 2);
         assert_eq!(board.n_cols, 5);
     }
@@ -252,7 +252,7 @@ mod tests {
 
         ";
 
-        let board: Board<char> = Board::from_buffer(input_buffer.as_bytes());
+        let board: Board<char> = Board::<char>::from_buffer(input_buffer.as_bytes());
         assert_eq!(board.n_rows, 1);
     }
 
