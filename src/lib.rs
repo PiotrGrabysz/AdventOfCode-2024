@@ -1,4 +1,5 @@
 pub mod board_matrix;
+pub mod number_utils;
 
 pub fn start_day(day: &str) {
     println!("Advent of Code 2024 - Day {:0>2}", day);
