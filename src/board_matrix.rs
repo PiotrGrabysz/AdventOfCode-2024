@@ -91,7 +91,7 @@ pub enum Move {
 }
 
 impl Move {
-    fn coordinates(&self) -> Point {
+    pub fn coordinates(&self) -> Point {
         match self {
             Move::Left => Point { x: -1, y: 0 },
             Move::Right => Point { x: 1, y: 0 },
