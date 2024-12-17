@@ -47,6 +47,14 @@ vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
 v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
 ";
 
+#[derive(Copy, Clone)]
+enum FieldType {
+    Barrier,
+    Obstacle,
+    Empty,
+    Robot,
+}
+
 fn main() -> Result<()> {
     start_day(DAY);
 
@@ -59,59 +67,44 @@ fn main() -> Result<()> {
         let mut current_position = find_initial_position(&warehouse_map).unwrap();
         remove_initial_position_character(&mut warehouse_map, &current_position);
 
-        let char_to_direction: HashMap<char, Point> = HashMap::from([
-            ('<', Move::Left.coordinates()),
-            ('>', Move::Right.coordinates()),
-            ('^', Move::Top.coordinates()),
-            ('v', Move::Bottom.coordinates()),
-        ]);
-
-        // let initial_barrier_count = _counter_characters(&warehouse_map, '#');
-        // let initial_box_count = _counter_characters(&warehouse_map, 'O');
-
-        println!("Starting new map.");
+        let char_to_direction = get_char_to_direction_map();
 
         for move_char in moves.iter() {
-            // println!("\nMoving {move_char:?}");
             let direction = char_to_direction.get(move_char).unwrap();
             let new_position = current_position.add(direction);
             let next_value = warehouse_map.get_value_from_point(&new_position)?;
 
-            if *next_value == '.' {
-                // warehouse_map.set_value(
-                //     current_position.y as usize,
-                //     current_position.x as usize,
-                //     '.',
-                // )?;
-                // warehouse_map.set_value(new_position.y as usize, new_position.x as usize, '@')?;
-                current_position = new_position;
-            } else if *next_value == 'O' {
-                let (last_index, last_value) =
-                    get_last_index_behind_boxes(&warehouse_map, &current_position, direction);
-                if last_value == '.' {
+            match next_value {
+                FieldType::Empty => {
                     current_position = new_position;
-                    warehouse_map.set_value(
-                        current_position.y as usize,
-                        current_position.x as usize,
-                        '.',
-                    )?;
-                    // warehouse_map.set_value(
-                    //     current_position.y as usize,
-                    //     current_position.x as usize,
-                    //     '@',
-                    // )?;
-                    warehouse_map.set_value(last_index.y as usize, last_index.x as usize, 'O')?;
                 }
-            } else if *next_value != '#' {
-                return Err(anyhow!("Found invalid character: {}", *next_value));
+                FieldType::Obstacle => {
+                    let (last_index, last_value) =
+                        get_last_index_behind_boxes(&warehouse_map, &current_position, direction);
+                    match last_value {
+                        FieldType::Empty => {
+                            current_position = new_position;
+                            warehouse_map.set_value(
+                                current_position.y as usize,
+                                current_position.x as usize,
+                                FieldType::Empty,
+                            )?;
+                            warehouse_map.set_value(
+                                last_index.y as usize,
+                                last_index.x as usize,
+                                FieldType::Obstacle,
+                            )?;
+                        }
+                        _ => {}
+                    }
+                }
+                FieldType::Barrier => continue,
+                FieldType::Robot => {
+                    return Err(anyhow!(
+                        "Robot character should be removed during initialization!"
+                    ));
+                }
             }
-            // let barrier_count = _counter_characters(&warehouse_map, '#');
-            // assert_eq!(initial_barrier_count, barrier_count);
-            // let box_count = _counter_characters(&warehouse_map, 'O');
-            // assert_eq!(initial_box_count, box_count);
-            // let position_char_count = _counter_characters(&warehouse_map, '@');
-            // assert_eq!(position_char_count, 1);
-            // print_board(&warehouse_map);
         }
 
         Ok(calculate_gps_score(&warehouse_map))
@@ -143,20 +136,42 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn read_map_and_moves<R: BufRead>(reader: &mut R) -> (Board<char>, Vec<char>) {
+fn read_map_and_moves<R: BufRead>(reader: &mut R) -> (Board<FieldType>, Vec<char>) {
     let warehouse_map = read_map(reader);
     let moves = read_moves(reader);
     (warehouse_map, moves)
 }
 
-fn read_map<R: BufRead>(reader: &mut R) -> Board<char> {
-    let mut rows: Vec<Vec<char>> = Vec::new();
+fn read_map<R: BufRead>(reader: &mut R) -> Board<FieldType> {
+    fn _map_char_to_field_type(c: char) -> Result<FieldType> {
+        if c == '#' {
+            return Ok(FieldType::Barrier);
+        }
+        if c == 'O' {
+            return Ok(FieldType::Obstacle);
+        }
+        if c == '.' {
+            return Ok(FieldType::Empty);
+        }
+        if c == '@' {
+            return Ok(FieldType::Robot);
+        }
+        Err(anyhow!("Found invalid character: {}", c))
+    }
+
+    let mut rows: Vec<Vec<FieldType>> = Vec::new();
     for line in reader.lines().flatten() {
         let trimmed = line.trim();
         if trimmed.is_empty() {
             break;
         }
-        rows.push(trimmed.chars().collect());
+        rows.push(
+            trimmed
+                .chars()
+                .into_iter()
+                .map(|c| _map_char_to_field_type(c).unwrap())
+                .collect()
+        );
     }
     Board::new(rows)
 }
@@ -171,79 +186,77 @@ fn read_moves<R: BufRead>(reader: &mut R) -> Vec<char> {
     moves
 }
 
-fn find_initial_position(map: &Board<char>) -> Option<Point> {
+fn find_initial_position(map: &Board<FieldType>) -> Option<Point> {
     for row in 0..map.n_rows {
         for col in 0..map.n_cols {
             let value = map.get_value(row, col).unwrap();
-            if *value == '@' {
-                return Some(Point {
-                    x: col as i32,
-                    y: row as i32,
-                });
+            match value {
+                FieldType::Robot => {
+                    return Some(Point {
+                        x: col as i32,
+                        y: row as i32,
+                    });
+                }
+                _ => {}
             }
         }
     }
     None
 }
 
-fn remove_initial_position_character(map: &mut Board<char>, initial_position: &Point) {
+fn remove_initial_position_character(map: &mut Board<FieldType>, initial_position: &Point) {
     map.set_value(
         initial_position.y as usize,
         initial_position.x as usize,
-        '.',
+        FieldType::Empty,
     )
     .unwrap()
 }
 
+fn get_char_to_direction_map() -> HashMap<char, Point> {
+    let char_to_direction: HashMap<char, Point> = HashMap::from([
+        ('<', Move::Left.coordinates()),
+        ('>', Move::Right.coordinates()),
+        ('^', Move::Top.coordinates()),
+        ('v', Move::Bottom.coordinates()),
+    ]);
+    char_to_direction
+}
+
 fn get_last_index_behind_boxes(
-    map: &Board<char>,
+    map: &Board<FieldType>,
     initial_position: &Point,
     direction: &Point,
-) -> (Point, char) {
+) -> (Point, FieldType) {
     let mut new_position = initial_position.add(direction);
-    let mut next_value = *map
+    let mut next_value = map
         .get_value_from_point(&new_position)
         .expect("The map is restricted by barriers '#', so I can't go outside of the map");
 
-    while next_value == 'O' {
+    let mut last_obstacle_in_row_found = false;
+    while !last_obstacle_in_row_found {
         new_position = new_position.add(direction);
-        next_value = *map
+        next_value = map
             .get_value_from_point(&new_position)
             .expect("The map is restricted by barriers '#', so I can't go outside of the map");
+        match next_value {
+            FieldType::Obstacle => continue,
+            _ => last_obstacle_in_row_found = true,
+        }
     }
-    (new_position, next_value)
+    (new_position, next_value.clone())
 }
 
-fn calculate_gps_score(map: &Board<char>) -> usize {
+fn calculate_gps_score(map: &Board<FieldType>) -> usize {
     let mut score = 0;
     for row in 0..map.n_rows {
         for col in 0..map.n_cols {
             let value = map.get_value(row, col).unwrap();
-            if *value == 'O' {
-                score += 100 * row + col;
+            match value {
+                FieldType::Obstacle => score += 100 * row + col,
+                _ => continue,
             }
         }
     }
     score
 }
-//
-// fn print_board(board: &Board<char>) {
-//     println!();
-//     for row in board.board.iter() {
-//         let row: String = row.iter().collect();
-//         println!("{}", row);
-//     }
-// }
-//
-// fn _counter_characters(map: &Board<char>, character: char) -> usize {
-//     let mut count = 0;
-//     for row in 0..map.n_rows {
-//         for col in 0..map.n_cols {
-//             let value = map.get_value(row, col).unwrap();
-//             if *value == character {
-//                 count += 1;
-//             }
-//         }
-//     }
-//     count
-// }
