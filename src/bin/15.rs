@@ -83,14 +83,12 @@ fn main() -> Result<()> {
                         get_last_index_behind_boxes(&warehouse_map, &current_position, direction);
                     if let FieldType::Empty = last_value {
                         current_position = new_position;
-                        warehouse_map.set_value(
-                            current_position.y as usize,
-                            current_position.x as usize,
+                        warehouse_map.set_value_from_point(
+                            &current_position,
                             FieldType::Empty,
                         )?;
-                        warehouse_map.set_value(
-                            last_index.y as usize,
-                            last_index.x as usize,
+                        warehouse_map.set_value_from_point(
+                            &last_index,
                             FieldType::Obstacle,
                         )?;
                     }
@@ -167,7 +165,7 @@ fn read_map<R: BufRead>(reader: &mut R) -> Board<FieldType> {
                 .chars()
                 .into_iter()
                 .map(|c| _map_char_to_field_type(c).unwrap())
-                .collect()
+                .collect(),
         );
     }
     Board::new(rows)
@@ -184,23 +182,17 @@ fn read_moves<R: BufRead>(reader: &mut R) -> Vec<char> {
 }
 
 fn find_initial_position(map: &Board<FieldType>) -> Option<Point> {
-    for row in 0..map.n_rows {
-        for col in 0..map.n_cols {
-            if let FieldType::Robot = map.get_value(row, col).unwrap() {
-                return Some(Point {
-                    x: col as i32,
-                    y: row as i32,
-                });
-            }
+    for (point, value) in map.iter() {
+        if let FieldType::Robot = value {
+            return Some(point)
         }
     }
     None
 }
 
 fn remove_initial_position_character(map: &mut Board<FieldType>, initial_position: &Point) {
-    map.set_value(
-        initial_position.y as usize,
-        initial_position.x as usize,
+    map.set_value_from_point(
+        initial_position,
         FieldType::Empty,
     )
     .unwrap()
@@ -242,11 +234,11 @@ fn get_last_index_behind_boxes(
 
 fn calculate_gps_score(map: &Board<FieldType>) -> usize {
     let mut score = 0;
-    for row in 0..map.n_rows {
-        for col in 0..map.n_cols {
-            if let FieldType::Obstacle = map.get_value(row, col).unwrap() {
-                score += 100 * row + col
-            }
+    for (point, value) in map.iter() {
+        if let FieldType::Obstacle = value {
+            let row_index = point.y as usize;
+            let col_index = point.x as usize;
+            score += 100 * row_index + col_index
         }
     }
     score

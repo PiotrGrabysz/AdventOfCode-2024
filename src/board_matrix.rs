@@ -38,6 +38,31 @@ impl<T> Board<T> {
         }
         Err(Error::msg("Attempting to set out of bounds value"))
     }
+
+    pub fn set_value_from_point(&mut self, point: &Point, value: T) -> Result<()> {
+        let row_index = point.y as usize;
+        let col_index = point.x as usize;
+        self.set_value(row_index, col_index, value)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (Point, &T)> {
+        self.board
+            .iter()
+            .enumerate() // (row_index, &row)
+            .flat_map(|(row_index, row)| {
+                row.iter()
+                    .enumerate() // (col_index, &value)
+                    .map(move |(col_index, value)| {
+                        (
+                            Point {
+                                x: col_index as i32,
+                                y: row_index as i32,
+                            },
+                            value,
+                        )
+                    })
+            })
+    }
 }
 
 impl Board<char> {
