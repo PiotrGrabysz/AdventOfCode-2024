@@ -81,21 +81,18 @@ fn main() -> Result<()> {
                 FieldType::Obstacle => {
                     let (last_index, last_value) =
                         get_last_index_behind_boxes(&warehouse_map, &current_position, direction);
-                    match last_value {
-                        FieldType::Empty => {
-                            current_position = new_position;
-                            warehouse_map.set_value(
-                                current_position.y as usize,
-                                current_position.x as usize,
-                                FieldType::Empty,
-                            )?;
-                            warehouse_map.set_value(
-                                last_index.y as usize,
-                                last_index.x as usize,
-                                FieldType::Obstacle,
-                            )?;
-                        }
-                        _ => {}
+                    if let FieldType::Empty = last_value {
+                        current_position = new_position;
+                        warehouse_map.set_value(
+                            current_position.y as usize,
+                            current_position.x as usize,
+                            FieldType::Empty,
+                        )?;
+                        warehouse_map.set_value(
+                            last_index.y as usize,
+                            last_index.x as usize,
+                            FieldType::Obstacle,
+                        )?;
                     }
                 }
                 FieldType::Barrier => continue,
@@ -189,15 +186,11 @@ fn read_moves<R: BufRead>(reader: &mut R) -> Vec<char> {
 fn find_initial_position(map: &Board<FieldType>) -> Option<Point> {
     for row in 0..map.n_rows {
         for col in 0..map.n_cols {
-            let value = map.get_value(row, col).unwrap();
-            match value {
-                FieldType::Robot => {
-                    return Some(Point {
-                        x: col as i32,
-                        y: row as i32,
-                    });
-                }
-                _ => {}
+            if let FieldType::Robot = map.get_value(row, col).unwrap() {
+                return Some(Point {
+                    x: col as i32,
+                    y: row as i32,
+                });
             }
         }
     }
@@ -251,10 +244,8 @@ fn calculate_gps_score(map: &Board<FieldType>) -> usize {
     let mut score = 0;
     for row in 0..map.n_rows {
         for col in 0..map.n_cols {
-            let value = map.get_value(row, col).unwrap();
-            match value {
-                FieldType::Obstacle => score += 100 * row + col,
-                _ => continue,
+            if let FieldType::Obstacle = map.get_value(row, col).unwrap() {
+                score += 100 * row + col
             }
         }
     }
